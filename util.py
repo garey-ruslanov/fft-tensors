@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 
 import subprocess
 
+from fit_exp import try_fit
+from reconstruct import reconstruct_from_pivots
+
 def read_raw(filename='out.txt'):
     dt = '<i4' #
     with open(filename) as f:
@@ -64,11 +67,13 @@ def plot_signal(a : np.ndarray, nolog=False, name=''):
 def plot_spectrum(s : np.ndarray, abs=False, name=''):
     plt.title('spectrum ' + name)
     if abs:
-        plt.plot(np.abs(np.fft.fftshift(np.fft.fft(s))))
+        plt.plot(np.abs(np.fft.fftshift(np.fft.fft(s)))[::-1])
     else:
-        plt.plot(np.real(np.fft.fftshift(np.fft.fft(s))))
-        plt.plot(np.imag(np.fft.fftshift(np.fft.fft(s))))
-    plt.show()
+        plt.plot(np.real(np.fft.fftshift(np.fft.fft(s)))[::-1])
+        plt.plot(np.imag(np.fft.fftshift(np.fft.fft(s)))[::-1])
+    # reversing spectrums just cause 
+    # silencing plt.show
+    # plt.show()
 
 
 def plot_norm(a : np.ndarray):
@@ -83,6 +88,11 @@ def extend2n(array : np.ndarray):
     while N2 < N:
         N2 *= 2
     array = np.concatenate((array, np.zeros((N2 - N,), dtype=array.dtype)))
+    
+    N = N2
+    while np.linalg.norm(array[N // 2:]) == 0:
+        array = array[:N // 2]
+        N = N // 2
     return array
 
 
@@ -151,8 +161,8 @@ def ttsvd_restore(d, gset):
 
 
 def exec_als(R=1):
-    output = subprocess.run(['./als_bin1', str(R)], capture_output=True)
-    print(output.stdout.decode())
+    output = subprocess.run(['./als_bin1', str(R)], capture_output=False)
+    #print(output.stdout.decode())
 
 
 def gen_data(N : int, R : int, M : float):
@@ -167,21 +177,34 @@ def plot_rank1(vectors : list, R : int):
     sig = np.ones((1))
     for v in vectors:
         sig = np.outer(sig, v)
-    #plot_signal(sig.ravel(), nolog=True)
+
     
     con = 1.0
     inds = []
     for v in vectors:
         con *= v[0]
         p = v[1] / v[0]
-        if p == 0.0:
-            p = 1.0
-            # ???????????
+
         inds.append(np.log(p))
     
-    plt.plot(np.real(inds))
-    plt.plot(np.imag(inds))
-    pivot = inds[0] / (2**(R-1))
-    print(pivot, inds[-1])
+    inds_r = np.real(inds)
+    inds_i = np.imag(inds)
 
+    phi_r = try_fit(inds_r, mod=False)
+    phi_i = try_fit(inds_i, mod=True)
+    
+    plt.plot(inds_r)
+    plt.plot([(phi_r * 2**k) for k in range(len(inds_r))][::-1])
     plt.show()
+    plt.plot(inds_i)
+    plt.plot([(phi_i * 2**k + np.pi) % (2*np.pi) - np.pi for k in range(len(inds_i))][::-1])
+    plt.show()
+
+    inds_new = [(phi_r * 2**k + 1j * phi_i * 2**k) for k in range(len(inds_r))][::-1]
+    asdf = reconstruct_from_pivots(inds_new) * con
+    plot_spectrum(sig.ravel(), abs=True)
+    plot_spectrum(asdf, abs=True)
+    plt.show()
+
+    # !
+    return asdf
