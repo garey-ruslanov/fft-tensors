@@ -1,0 +1,12 @@
+BLAS-3.12.0/*
+lapack*
+blas-3.12.0.tgz
+._BLAS*
+
+__pycache__
+
+out*.txt
+leonid*
+fid*
+param
+compile_als
