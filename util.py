@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 import subprocess
 
-from fit_exp import try_fit
+from fit_exp import try_fit, detect_bullshit
 from reconstruct import reconstruct_from_pivots
 
 def read_raw(filename='out.txt'):
@@ -67,11 +67,11 @@ def plot_signal(a : np.ndarray, nolog=False, name=''):
 def plot_spectrum(s : np.ndarray, abs=False, name=''):
     plt.title('spectrum ' + name)
     if abs:
-        plt.plot(np.abs(np.fft.fftshift(np.fft.fft(s)))[::-1])
+        plt.plot(np.abs(np.fft.fftshift(np.fft.fft(s))))
     else:
-        plt.plot(np.real(np.fft.fftshift(np.fft.fft(s)))[::-1])
-        plt.plot(np.imag(np.fft.fftshift(np.fft.fft(s)))[::-1])
-    # reversing spectrums just cause 
+        plt.plot(np.real(np.fft.fftshift(np.fft.fft(s))))
+        plt.plot(np.imag(np.fft.fftshift(np.fft.fft(s))))
+
     # silencing plt.show
     # plt.show()
 
@@ -177,7 +177,6 @@ def plot_rank1(vectors : list, R : int):
     sig = np.ones((1))
     for v in vectors:
         sig = np.outer(sig, v)
-
     
     con = 1.0
     inds = []
@@ -208,3 +207,17 @@ def plot_rank1(vectors : list, R : int):
 
     # !
     return asdf
+
+
+def info_rank1(vectors : list):
+    signal = np.ones((1,))
+    for v in vectors:
+        signal = np.outer(signal, v)
+    
+    indexes = []
+    cst = 1.0
+    for v in vectors:
+        indexes.append(np.log(v[1] / v[0]))
+        cst *= v[0]
+    
+    return signal.ravel(), indexes, cst
