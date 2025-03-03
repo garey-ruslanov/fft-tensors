@@ -57,6 +57,6 @@ def detect_bullshit(inds):
     phi_i = try_fit(np.imag(inds), mod=True)
 
     inds_new = [(phi_r * 2**k + 1j * ((phi_i * 2**k + np.pi) % (2*np.pi) - np.pi)) for k in range(len(inds))][::-1]
-    print(norm2(np.asarray(inds) - np.asarray(inds_new)))
+    #print(norm2(np.asarray(inds) - np.asarray(inds_new)))
 
     return inds_new
