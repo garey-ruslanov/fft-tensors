@@ -52,6 +52,16 @@ def print_data(data : np.ndarray, complex=True, filename='out1.txt'):
             f.write('\n')
 
 
+def print_matrices(matrices : list, tshape, filename='out3.txt'):  # &
+    R = len(tshape)
+
+    with open(filename, 'w') as f:
+        f.write()
+        f.write('\n')
+
+    return
+
+
 def plot_signal(a : np.ndarray, nolog=False, name=''):
     plt.title('abs ' + name)
     plt.plot(np.abs(a.ravel()))
@@ -220,4 +230,12 @@ def info_rank1(vectors : list):
         indexes.append(np.log(v[1] / v[0]))
         cst *= v[0]
     
-    return signal.ravel(), indexes, cst
+    nrm = np.linalg.norm(signal)
+    return signal.ravel(), indexes, nrm
+
+
+def noise_uniform(sig : np.ndarray, a):
+    no = np.zeros((sig.size,))
+    for k in range(no.size):
+        no[k] = np.random.uniform(-1.0, 1.0)
+    sig += no.reshape(sig.shape) * a
