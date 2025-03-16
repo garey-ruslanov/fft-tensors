@@ -52,14 +52,21 @@ def print_data(data : np.ndarray, complex=True, filename='out1.txt'):
             f.write('\n')
 
 
-def print_matrices(matrices : list, tshape, filename='out3.txt'):  # &
-    R = len(tshape)
+def print_matrices(matrices : list, tshape, complex=True, filename='out3.txt'):  # &
+    D = len(tshape)
+    R = matrices[0].shape[1]
 
     with open(filename, 'w') as f:
-        f.write()
+        f.write(str(R))
         f.write('\n')
-
-    return
+        for i in range(len(matrices)):
+            for c in range(R):
+                for r in range(tshape[i]):
+                    if complex:
+                        f.write(str(np.real(matrices[i][r][c])) + " " + str(np.imag(matrices[i][r][c])) + "\n")
+                    else:
+                        pass
+            f.write("\n")
 
 
 def plot_signal(a : np.ndarray, nolog=False, name=''):
@@ -170,7 +177,46 @@ def ttsvd_restore(d, gset):
     return gg
 
 
-def exec_als(R=1):
+from als import als_iteration_1, normalize_matrices, cp_restore, random_matrices
+
+
+def exec_als(R=1, use_random_matrices=True):
+    data = read_data("out1.txt")
+
+    # reading shape
+    with open("out2.txt", "r") as f:
+        dshape = [int(s) for s in f.readlines()]
+        d, shape = dshape[0], dshape[1:]
+    # done reading shape
+
+    T = data.reshape(shape)
+    if use_random_matrices:
+        matrices = use_random_matrices(shape, R)
+    else:
+        try:
+            matrices = read_matrices(shape, filename="als_start_matrices.txt")
+        except:
+            print("failed reading matrices.")
+            return
+    matrices, norms = normalize_matrices(R, matrices)
+    epsilon_rel = 1e-6
+    i = 0
+    n1 = np.linalg.norm(T - cp_restore(shape, matrices, R, norms))
+    n2 = 1.0
+    normT = np.linalg.norm(T)
+    while np.abs(n2 - n1) / normT > epsilon_rel or i < 10:
+        matrices, norms, n1, n2 = als_iteration_1(T, shape, matrices, norms, R)
+        print(np.abs(n2 - n1) / normT)
+        i += 1
+
+    print("total iterations:", i)
+    print("end relative residual:", n2 / normT)
+    print_data(cp_restore(shape, matrices, R, norms).flatten(), "out_als.txt")
+    matrices[0] = matrices[0] @ np.diag(norms)
+    print_matrices(matrices, shape, filename="out_als_matrices.txt")
+
+
+def _exec_als(R=1):
     output = subprocess.run(['./als_bin1', str(R)], capture_output=False)
     #print(output.stdout.decode())
 
@@ -239,3 +285,10 @@ def noise_uniform(sig : np.ndarray, a):
     for k in range(no.size):
         no[k] = np.random.uniform(-1.0, 1.0)
     sig += no.reshape(sig.shape) * a
+
+
+def starting_matrices(tensor : np.ndarray, rank : int):
+    tshape = tensor.shape
+    d = len(tshape)
+    gset = ttsvd()
+    pass

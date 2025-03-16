@@ -11,7 +11,7 @@ from util import *
 # data: real 1H
 # filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/real1H/fid1'
 
-def experiment(data, rank, draw_info=True):
+def experiment(data, rank, draw_info=True, skip=False):
 
 
     n = data.size       ; N = n
@@ -23,7 +23,7 @@ def experiment(data, rank, draw_info=True):
     print_data(np.asarray(shape), False, 'out2.txt')
 
     r = rank            ; R = r
-    skip = False
+
     if not skip:
         ea = exec_als(R=R)
     else:
@@ -58,7 +58,7 @@ def experiment(data, rank, draw_info=True):
 
     items_to_draw.sort(key=lambda x: x[1], reverse=True)  # sorting by norm
 
-    g_per_row = 4
+    g_per_row = 6
     fig, axes = plt.subplots((2*R + g_per_row - 1) // g_per_row, g_per_row)
     fig.suptitle('Rank 1 components given by ALS, rank=%i' % R)
     for k in range(R):
@@ -77,11 +77,34 @@ def experiment(data, rank, draw_info=True):
     plt.show()
 
 
+def experiment_2(data : np.ndarray):
+    R = 10
+    n = data.size       ; N = n
+    d = int(np.log2(n)) ; D = d
+    shape = [2] * d
+    assert np.prod(shape) == n
+
+    for r in range(1,1+R):
+        g1 = ttsvd(d, data.reshape(shape), [1]*d, -1)
+        cp1 = [np.copy(g1[i].reshape((shape[i], 1))) for i in range(d)]
+        matrices, norms = normalize_matrices(1, cp1)
+        
+        print_data(data, complex=True, filename="out1.txt")
+        print_data(np.asarray(shape), complex=False, filename="out2.txt")
+        print_matrices(cp1, shape, complex=True, filename="als_start_matrices.txt")
+
+        exec_als(R=r, use_random_matrices=False)
+        #####
+        
+    pass
+
+
+"""
 # data: topspin generated 13C
 filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/generated/naphtalene_13C'
 data = extend2n(read_raw(filename))
 
-experiment(data, 5)
+experiment(data, 10)
 
 # data: generated, uniformly noised
 #filename = same
@@ -89,7 +112,7 @@ data = extend2n(read_raw(filename))
 snr = 0.1
 noise_uniform(data, np.max(np.abs(data)) * snr)
 
-experiment(data, 5)
+experiment(data, 10)
 
 # another signal
 
@@ -104,3 +127,10 @@ snr = 0.1
 noise_uniform(data, np.max(np.abs(data)) * snr)
 
 experiment(data, 10)
+"""
+
+filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/generated/ile_1H'
+data = extend2n(read_raw(filename))
+
+#experiment(data, 10, skip=False)
+experiment_2(data)
