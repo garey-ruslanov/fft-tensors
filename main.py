@@ -19,8 +19,8 @@ def experiment(data, rank, draw_info=True, skip=False):
     shape = [2] * d
     assert np.prod(shape) == n
 
-    print_data(data, True, 'out1.txt')
-    print_data(np.asarray(shape), False, 'out2.txt')
+    print_data(data, filename='out1.txt', complex=True)
+    print_data(np.asarray(shape), filename='out2.txt', complex=False)
 
     r = rank            ; R = r
 
@@ -30,7 +30,7 @@ def experiment(data, rank, draw_info=True, skip=False):
         print('als skipped')
 
     data_a = read_data('out_als.txt')  # unused
-    matrices = read_matrices(shape)
+    matrices = read_matrices(shape, filename="out_als_matrices.txt")
 
     spec_lim = np.max(np.abs(np.fft.fft(data)))
     # plot_spectrum(data, abs=True)
@@ -77,27 +77,57 @@ def experiment(data, rank, draw_info=True, skip=False):
     plt.show()
 
 
-def experiment_2(data : np.ndarray):
-    R = 10
+def experiment_2(data : np.ndarray, R : int, draw_info=True):
     n = data.size       ; N = n
     d = int(np.log2(n)) ; D = d
     shape = [2] * d
     assert np.prod(shape) == n
 
+    data_c = np.copy(data)
+    prev_matrices = None
+    iterations = []
+    residual_norms = []
     for r in range(1,1+R):
-        g1 = ttsvd(d, data.reshape(shape), [1]*d, -1)
+        print("r =", r)
+        g1 = ttsvd(d, data_c.reshape(shape), [1]*d, -1)
         cp1 = [np.copy(g1[i].reshape((shape[i], 1))) for i in range(d)]
-        matrices, norms = normalize_matrices(1, cp1)
-        
+
+        if draw_info:
+            plot_spectrum(data, abs=True)
+            plot_spectrum(cp_restore(shape, prev_matrices, r-1).flatten(), abs=True)
+            plot_spectrum(cp_restore(shape, cp1, 1).flatten(), abs=True)
+            plt.show()
+
+        matrices_r = [np.zeros((shape[i], r), dtype=complex) for i in range(d)]
+        if prev_matrices is not None:
+            for i in range(d):
+                matrices_r[i][:,:r-1] = prev_matrices[i][:,:]
+        for i in range(d):
+            matrices_r[i][:,r-1] = cp1[i][:,0]
+
         print_data(data, complex=True, filename="out1.txt")
         print_data(np.asarray(shape), complex=False, filename="out2.txt")
-        print_matrices(cp1, shape, complex=True, filename="als_start_matrices.txt")
+        print_matrices(matrices_r, shape, complex=True, filename="als_start_matrices.txt")
 
-        exec_als(R=r, use_random_matrices=False)
-        #####
-        
-    pass
+        iter, res_norm = exec_als(R=r, use_random_matrices=False)
+        iterations.append(iter)
+        residual_norms.append(res_norm)
 
+        t_a = read_data(filename="out_als.txt")
+        matrices_ls = read_matrices(shape, filename="out_als_matrices.txt")
+
+        data_c = data - t_a
+        prev_matrices = matrices_ls
+        if draw_info:
+            plot_spectrum(data, abs=True)
+            plot_spectrum(t_a, abs=True)
+            plt.show()
+    print(iterations)
+    print(residual_norms)
+
+    plot_spectrum(data, abs=True)
+    plot_spectrum(cp_restore(shape, prev_matrices, R).flatten(), abs=True)
+    plt.show()
 
 """
 # data: topspin generated 13C
@@ -132,5 +162,5 @@ experiment(data, 10)
 filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/generated/ile_1H'
 data = extend2n(read_raw(filename))
 
-#experiment(data, 10, skip=False)
-experiment_2(data)
+experiment(data, 15)
+experiment_2(data, 15, draw_info=False)

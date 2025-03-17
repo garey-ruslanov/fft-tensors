@@ -15,14 +15,14 @@ def read_raw(filename='out.txt'):
         return arr
 
 
-def read_data(filename=''):
+def read_data(filename):
     with open(filename, 'r') as f:
         data = np.asarray([float(s.split()[0]) + 1j * float(s.split()[1]) for s in f.readlines()[1:]])
 
         return data
 
 
-def read_matrices(tshape, filename='out_als_matrices.txt'):
+def read_matrices(tshape, filename):
     D = len(tshape)
     with open(filename, 'r') as f:
         R = int(f.readline())
@@ -39,7 +39,7 @@ def read_matrices(tshape, filename='out_als_matrices.txt'):
     return matrices
 
 
-def print_data(data : np.ndarray, complex=True, filename='out1.txt'):
+def print_data(data : np.ndarray, filename, complex=True):
     
     with open(filename, 'w') as f:
         f.write(str(data.size))
@@ -52,7 +52,7 @@ def print_data(data : np.ndarray, complex=True, filename='out1.txt'):
             f.write('\n')
 
 
-def print_matrices(matrices : list, tshape, complex=True, filename='out3.txt'):  # &
+def print_matrices(matrices : list, tshape, filename, complex=True):  # &
     D = len(tshape)
     R = matrices[0].shape[1]
 
@@ -191,7 +191,7 @@ def exec_als(R=1, use_random_matrices=True):
 
     T = data.reshape(shape)
     if use_random_matrices:
-        matrices = use_random_matrices(shape, R)
+        matrices = random_matrices(shape, R)
     else:
         try:
             matrices = read_matrices(shape, filename="als_start_matrices.txt")
@@ -211,9 +211,11 @@ def exec_als(R=1, use_random_matrices=True):
 
     print("total iterations:", i)
     print("end relative residual:", n2 / normT)
-    print_data(cp_restore(shape, matrices, R, norms).flatten(), "out_als.txt")
     matrices[0] = matrices[0] @ np.diag(norms)
     print_matrices(matrices, shape, filename="out_als_matrices.txt")
+    print_data(cp_restore(shape, matrices, R).flatten(), complex=True, filename="out_als.txt")
+
+    return i, n2 / normT
 
 
 def _exec_als(R=1):
