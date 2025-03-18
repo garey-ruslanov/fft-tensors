@@ -77,17 +77,18 @@ def experiment(data, rank, draw_info=True, skip=False):
     plt.show()
 
 
-def experiment_2(data : np.ndarray, R : int, draw_info=True):
+def experiment_2(data : np.ndarray, sR : int, R : int, draw_info=True, prev_matrices=None):
     n = data.size       ; N = n
     d = int(np.log2(n)) ; D = d
     shape = [2] * d
     assert np.prod(shape) == n
 
     data_c = np.copy(data)
-    prev_matrices = None
+    if prev_matrices is not None:
+        data_c = data_c - cp_restore(shape, prev_matrices, sR-1).flatten()
     iterations = []
     residual_norms = []
-    for r in range(1,1+R):
+    for r in range(sR, R+1):
         print("r =", r)
         g1 = ttsvd(d, data_c.reshape(shape), [1]*d, -1)
         cp1 = [np.copy(g1[i].reshape((shape[i], 1))) for i in range(d)]
@@ -162,5 +163,5 @@ experiment(data, 10)
 filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/generated/ile_1H'
 data = extend2n(read_raw(filename))
 
-experiment(data, 15)
-experiment_2(data, 15, draw_info=False)
+#experiment(data, 15)
+experiment_2(data, 25, 30, draw_info=True, prev_matrices=read_matrices([2] * (int(np.log2(data.size))), filename="out_als_matrices 24.txt"))

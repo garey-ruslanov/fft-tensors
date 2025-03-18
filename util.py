@@ -206,7 +206,7 @@ def exec_als(R=1, use_random_matrices=True):
     normT = np.linalg.norm(T)
     while np.abs(n2 - n1) / normT > epsilon_rel or i < 10:
         matrices, norms, n1, n2 = als_iteration_1(T, shape, matrices, norms, R)
-        print(np.abs(n2 - n1) / normT)
+        print(np.abs(n2 - n1) / normT, ', res:', n2 / normT)
         i += 1
 
     print("total iterations:", i)
