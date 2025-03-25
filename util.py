@@ -6,8 +6,8 @@ import subprocess
 from fit_exp import try_fit, detect_bullshit
 from reconstruct import reconstruct_from_pivots
 
-def read_raw(filename='out.txt'):
-    dt = '<i4' #
+def read_raw(filename='out.txt', b_endian=False):
+    dt = ">i4" if b_endian else "<i4"
     with open(filename) as f:
         arr = np.fromfile(f, dtype=dt, count=-1, )
         arr = np.asarray([arr[2*i] + arr[2*i+1] * 1.j for i in range(len(arr) // 2)])
@@ -78,7 +78,6 @@ def plot_signal(a : np.ndarray, nolog=False, name=''):
     plt.title('logarithmic ' + name)
     plt.plot(np.real(np.log(a.ravel())))
     plt.plot(np.imag(np.log(a.ravel())))
-    plt.show()
 
 
 def plot_spectrum(s : np.ndarray, abs=False, name=''):
@@ -88,9 +87,6 @@ def plot_spectrum(s : np.ndarray, abs=False, name=''):
     else:
         plt.plot(np.real(np.fft.fftshift(np.fft.fft(s))))
         plt.plot(np.imag(np.fft.fftshift(np.fft.fft(s))))
-
-    # silencing plt.show
-    # plt.show()
 
 
 def plot_norm(a : np.ndarray):
