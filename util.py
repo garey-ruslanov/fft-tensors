@@ -72,7 +72,6 @@ def print_matrices(matrices : list, tshape, filename, complex=True):  # &
 def plot_signal(a : np.ndarray, nolog=False, name=''):
     plt.title('abs ' + name)
     plt.plot(np.abs(a.ravel()))
-    plt.show()
     if nolog:
         return
     plt.title('logarithmic ' + name)
