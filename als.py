@@ -68,7 +68,7 @@ def als_iteration_1(T: np.ndarray, dims, matrices: list, norms, rank):
 
         mat_new = (np.linalg.pinv(matrix_kh_r) @ tk.T).T
         matrices[k] = mat_new
-        matrices, norms = normalize_matrices(rank, matrices)
+        matrices, norms = normalize_matrices2(rank, matrices)
 
         #norm_e_1 = np.linalg.norm(tk - mat_new @ np.diag(norms) @ matrix_kh_r.T)
         #print(norm_e, norm_e_1)
@@ -82,11 +82,22 @@ def random_matrices(dims, rank):
     return matrices
 
 
-def normalize_matrices(rank, matrices):
+def normalize_matrices2(rank, matrices):
     norms = np.ones((rank,))
     for k in range(len(matrices)):
         for j in range(rank):
             n = np.linalg.norm(matrices[k][:,j])
+            norms[j] *= n
+            matrices[k][:,j] = matrices[k][:,j] / n
+    
+    return matrices, norms
+
+# technically doesn't normalize
+def normalize_matrices1(rank, matrices):
+    norms = np.ones((rank,), dtype=complex)
+    for k in range(len(matrices)):
+        for j in range(rank):
+            n = matrices[k][0,j]
             norms[j] *= n
             matrices[k][:,j] = matrices[k][:,j] / n
     
@@ -100,7 +111,7 @@ if __name__ == "__main__":
 
     rank = 4
     matrices = random_matrices(dims, rank)
-    matrices, norms = normalize_matrices(rank, matrices)
+    matrices, norms = normalize_matrices2(rank, matrices)
 
     for i in range(1000):
         matrices, norms, n1, n2 = als_iteration_1(T, dims, matrices, norms, rank)
