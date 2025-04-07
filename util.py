@@ -6,6 +6,10 @@ import subprocess
 from fit_exp import try_fit, detect_bullshit
 from reconstruct import reconstruct_from_pivots
 
+filenames_dict = {"data":"out_data.txt", 
+                "shape":"out_shape.txt",
+                "result":"out_als.txt"}
+
 def read_raw(filename='out.txt', b_endian=False):
     dt = ">i4" if b_endian else "<i4"
     with open(filename) as f:
@@ -172,14 +176,14 @@ def ttsvd_restore(d, gset):
     return gg
 
 
-from als import als_iteration_1, normalize_matrices, cp_restore, random_matrices
+from als import *
 
 
 def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt"):
-    data = read_data("out1.txt")
+    data = read_data(filenames_dict["data"])
 
     # reading shape
-    with open("out2.txt", "r") as f:
+    with open(filenames_dict["shape"], "r") as f:
         dshape = [int(s) for s in f.readlines()]
         d, shape = dshape[0], dshape[1:]
     # done reading shape
@@ -193,7 +197,7 @@ def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt"
         except:
             print("failed reading matrices.")
             return
-    matrices, norms = normalize_matrices(R, matrices)
+    matrices, norms = normalize_matrices2(R, matrices)
     epsilon_rel = 1e-6
     i = 0
     n1 = np.linalg.norm(T - cp_restore(shape, matrices, R, norms))
@@ -208,7 +212,7 @@ def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt"
     print("end relative residual:", n2 / normT)
     matrices[0] = matrices[0] @ np.diag(norms)
     print_matrices(matrices, shape, filename=filename_out)
-    print_data(cp_restore(shape, matrices, R).flatten(), complex=True, filename="out_als.txt")
+    print_data(cp_restore(shape, matrices, R).flatten(), complex=True, filename=filenames_dict["result"])
 
     return i, n2 / normT
 
