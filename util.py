@@ -69,14 +69,14 @@ def print_matrices(matrices : list, tshape, filename, complex=True):  # &
             f.write("\n")
 
 
-def plot_signal(a : np.ndarray, nolog=False, name=''):
-    plt.title('abs ' + name)
-    plt.plot(np.abs(a.ravel()))
-    if nolog:
-        return
-    plt.title('logarithmic ' + name)
-    plt.plot(np.real(np.log(a.ravel())))
-    plt.plot(np.imag(np.log(a.ravel())))
+def plot_signal(a : np.ndarray, abs=True, name=''):
+    if abs:
+        plt.title('abs ' + name)
+        plt.plot(np.abs(a.ravel()))
+    else:
+        plt.title('logarithmic ' + name)
+        plt.plot(np.real(np.log(a.ravel())))
+        plt.plot(np.imag(np.log(a.ravel())))
 
 
 def plot_spectrum(s : np.ndarray, abs=False, name=''):
@@ -175,7 +175,7 @@ def ttsvd_restore(d, gset):
 from als import als_iteration_1, normalize_matrices, cp_restore, random_matrices
 
 
-def exec_als(R=1, use_random_matrices=True):
+def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt"):
     data = read_data("out1.txt")
 
     # reading shape
@@ -189,7 +189,7 @@ def exec_als(R=1, use_random_matrices=True):
         matrices = random_matrices(shape, R)
     else:
         try:
-            matrices = read_matrices(shape, filename="als_start_matrices.txt")
+            matrices = read_matrices(shape, filename=filename_in)
         except:
             print("failed reading matrices.")
             return
@@ -199,7 +199,7 @@ def exec_als(R=1, use_random_matrices=True):
     n1 = np.linalg.norm(T - cp_restore(shape, matrices, R, norms))
     n2 = 1.0
     normT = np.linalg.norm(T)
-    while np.abs(n2 - n1) / normT > epsilon_rel or i < 10:
+    while np.abs(n2 - n1) / normT > epsilon_rel:  # ?????????
         matrices, norms, n1, n2 = als_iteration_1(T, shape, matrices, norms, R)
         print(np.abs(n2 - n1) / normT, ', res:', n2 / normT)
         i += 1
@@ -207,7 +207,7 @@ def exec_als(R=1, use_random_matrices=True):
     print("total iterations:", i)
     print("end relative residual:", n2 / normT)
     matrices[0] = matrices[0] @ np.diag(norms)
-    print_matrices(matrices, shape, filename="out_als_matrices.txt")
+    print_matrices(matrices, shape, filename=filename_out)
     print_data(cp_restore(shape, matrices, R).flatten(), complex=True, filename="out_als.txt")
 
     return i, n2 / normT
