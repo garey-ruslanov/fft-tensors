@@ -1,29 +1,36 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def create_signal(params, n_sig=1):
-    N = params['N']
-    pivots = params['pivots']
+def random_signal(n, n_peaks, max_ampl, exponent):
+    d = int(np.log2(n));    D = d
+    assert n == 2**d
+    r = n_peaks;            R = r
+    
+    from als import cp_restore
 
-    sig = np.zeros(N, dtype=complex)
-    for p in pivots:
-        sig += np.asarray([np.exp(k*p) for k in range(N)])
-    return sig
-
-
-def noise_uniform(sig : np.ndarray, a):
-    no = np.zeros((sig.size,))
-    for k in range(no.size):
-        no[k] = np.random.uniform(-1.0, 1.0)
-    sig += no.reshape(sig.shape) * a
-
+    freqs = [np.random.rand() * n for _ in range(r)]
+    norms = [np.random.rand() * max_ampl for _ in range(r)]
+    
+    matrices = [np.zeros((2,r), dtype=complex) for _ in range(d)]
+    for i in range(d):
+        for k in range(r):
+            matrices[i][0,k] = 1.0;
+            matrices[i][1,k] = np.exp((exponent + freqs[k] * 1j) * 2**(d - i - 1))
+    tensor = cp_restore([2] * d, matrices, R, norms)
+    return tensor.flatten()
 
 if __name__ == '__main__':
-    sig = create_signal({'N':2048, 'pivots':[-0.024+1.5j]})
-    noise_uniform(sig, 0.05)
+    #sig = create_signal({'N':2048, 'pivots':[-0.024+1.5j]})
+    #noise_uniform(sig, 0.05)
 
-    plt.plot(np.abs(sig))
+    #plt.plot(np.abs(sig))
+    #plt.show()
+    #plt.plot(np.abs(np.fft.fftshift(np.fft.fft(sig))))
+    #plt.show()
+    signal = random_signal(32768, 25, 5e5, 5e-5)
+    from util import plot_spectrum
+    plot_spectrum(signal, abs=True)
     plt.show()
-    plt.plot(np.abs(np.fft.fftshift(np.fft.fft(sig))))
-    plt.show()
+
