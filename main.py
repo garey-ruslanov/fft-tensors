@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import subprocess
 
 from util import *
+from util2 import *
+from als import *
+from als import cp_restore, normalize_matrices2  # why vscode does not see import *.....
 
 # data: real 13C
 # filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/real13C/fid1'
@@ -77,7 +80,7 @@ def experiment(data, rank, draw_info=True, skip=False):
     plt.show()
 
 
-def experiment_2(data : np.ndarray, sR : int, R : int, draw_info=True, prev_matrices=None):
+def experiment_2(data : np.ndarray, sR : int, R : int, draw_info=True, flag2=False, prev_matrices=None):
     n = data.size       ; N = n
     d = int(np.log2(n)) ; D = d
     shape = [2] * d
@@ -123,12 +126,129 @@ def experiment_2(data : np.ndarray, sR : int, R : int, draw_info=True, prev_matr
             plot_spectrum(data, abs=True)
             plot_spectrum(t_a, abs=True)
             plt.show()
+        
+        if flag2:
+            EPS = 0.1
+            nrms = []
+            for k in range(r):
+                nrms.append(np.linalg.norm(cp_restore(shape, [mat[:,k:k+1] for mat in prev_matrices], 1)))
+            nrms = sorted(nrms, reverse=True)
+            print(nrms / nrms[0])
+            if (nrms[-1] / nrms[0] < EPS):
+                print("cringe components found,", len(list(filter(lambda x: x / nrms[0] < EPS, nrms))))
+
     print(iterations)
     print(residual_norms)
 
     plot_spectrum(data, abs=True)
     plot_spectrum(cp_restore(shape, prev_matrices, R).flatten(), abs=True)
     plt.show()
+
+    return prev_matrices
+
+# WIP
+def experiment_full(data : np.ndarray, rank : int, mode : str, save_matrices_every=4):
+    n = data.size       ; N = n
+    d = int(np.log2(n)) ; D = d
+    R = rank
+    shape = tuple([2] * d)
+    assert np.prod(shape) == n
+
+    start_rank = 20  # ?
+
+    # returns indices of at most 2 elements that differ from max by 0.08 or less
+    def max_2(spectrum):
+        k = 2
+        arr = np.abs(spectrum)
+        n = len(arr)
+        m = np.max(arr)
+        arr = arr / m
+        e = 0.08  # ???
+        l = []
+        for i in range(n):
+            v = arr[i]
+            if abs(m - v) < e:
+                l.append((v, i))
+        l = sorted(l, key=lambda x: x[0], reverse=True)
+        if len(l) > k:
+            l = l[:k]
+        return tuple([ll[1] for ll in l])
+
+    matrices = []
+    if mode == "random pivots":
+        exponent = fit_exp_whole_signal(data)
+        signal, matrices, _ = signal_from_pivots(D, [exponent + 1j * np.random.rand() * n for _ in range(start_rank)], None)
+
+        max_freq_data = np.max(np.abs(np.fft.fft(data)))
+        max_freq_rand = np.max(np.abs(np.fft.fft(signal)))
+        norms = [max_freq_data / max_freq_rand] * start_rank
+        matrices[0] = matrices[0] @ np.diag(norms)
+
+    if mode == "ttsvd":
+        g1 = ttsvd(d, data.reshape(shape), [1]*d, -1)
+        matrices = [np.copy(g1[i].reshape((shape[i], 1))) for i in range(d)]
+
+    if mode == "random":
+        from als import random_matrices
+        matrices = random_matrices(shape, start_rank)
+    
+    iterations = []
+    residual_norms = []
+
+    for r in range(start_rank, R+1):
+        print("r =", r)
+
+        if mode == "ttsvd":
+            g1 = ttsvd(d, data.reshape(shape), [1]*d, -1)
+            cp1 = [np.copy(g1[i].reshape((shape[i], 1))) for i in range(d)]
+            if len(matrices) == 0:
+                pass
+            # don't care what happens here, not going to execute it
+            # поебать че тут происходит, все равно не буду это запускать
+            pass
+
+        if mode == "random pivots":
+            # shit
+            #I = max_2(data - cp_restore(shape, matrices, r-1).flatten())[0]
+            #approx_freq = signal_from_pivots(D, (exponent + I * 1j), None)
+            #new_matrices = [np.zeros((2, r+1), dtype=complex) for i in range(d)]
+            #for i in range(d):
+            #    new_matrices[i][:,:r] = matrices[i][:,:]
+            #    new_matrices[i][:,r] = approx_freq[i][:,0]
+            # 
+            #matrices = new_matrices
+            # переделать эту хуйню
+            pass
+        
+        from util import filenames_dict
+
+        print_data(data, complex=True, filename=filenames_dict["data"])
+        print_data(np.asarray(shape), complex=False, filename=filenames_dict["shape"])
+        print_matrices(matrices, shape, complex=True, filename="als_start_matrices.txt")
+        
+        iter, res_norm = exec_als(R=r, use_random_matrices=False, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
+        iterations.append(iter)
+        residual_norms.append(res_norm)
+
+        t_a = read_data(filename=filenames_dict["result"])
+        matrices_ls = read_matrices(shape, filename="out_als_matrices.txt")
+
+        matrices = matrices_ls
+
+        plot_spectrum(data, abs=True)
+        plot_spectrum(t_a, abs=True)
+        plt.show()
+
+        if mode == "random pivots":
+            break
+    print(iterations)
+    print(residual_norms)
+
+    plot_spectrum(data, abs=True)
+    plot_spectrum(cp_restore(shape, matrices, R).flatten(), abs=True)
+    plt.show()
+
+    return matrices
 
 """
 # data: topspin generated 13C
@@ -161,7 +281,47 @@ experiment(data, 10)
 """
 
 filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/generated/ile_1H'
+#filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/real13C/fid1'
 data = extend2n(read_raw(filename))
 
 #experiment(data, 15)
-experiment_2(data, 25, 30, draw_info=True, prev_matrices=read_matrices([2] * (int(np.log2(data.size))), filename="out_als_matrices 24.txt"))
+#experiment_2(data, 51, 51, draw_info=False, prev_matrices=read_matrices([2] * (int(np.log2(data.size))), filename="out_als_matrices 50.txt"))
+
+D = int(np.log2(data.size))
+shape = tuple([2] * D)
+
+R = 40
+#als_matrices = \
+#experiment_2(data, 1, R, draw_info=False, prev_matrices=None, flag2=True)
+#als_matrices = \
+#read_matrices(shape, "out_als_matrices.txt")
+als_matrices = \
+experiment_full(data=data, rank=R, mode="random pivots", )
+
+
+als_matrices, norms = normalize_matrices2(R, als_matrices)
+comps = []
+for i in range(R):
+    mat1 = [np.zeros((2,1), dtype=complex) for _ in range(D)]
+    for k in range(D):
+        mat1[k][0,0] = als_matrices[k][0,i]
+        mat1[k][1,0] = als_matrices[k][1,i]
+    comps.append(mat1)
+
+
+#dims = tuple([m.shape[0] for m in als_matrices])
+
+#rank1_sig = [cp_restore(dims, [m[:,r].reshape((2, 1)) for m in als_matrices], 1).flatten() for r in range(R)]  # >:
+# true
+#asdf = []
+#for si in rank1_sig:
+#    s = np.abs(si)
+#    plot_signal(s, nolog=False)
+#    asdf.append(np.polyfit(np.linspace(0, len(s) - 1, len(s)), s, 1)[0])
+#    print(asdf[-1])
+#plt.show()
+#plt.plot(asdf)
+#plt.show()
+
+# E(R) = 2^14/15 ~= 1000
+# ||n||_F / 30
