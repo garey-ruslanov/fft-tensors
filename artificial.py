@@ -19,7 +19,7 @@ def random_signal(n, n_peaks, max_ampl, exponent):
             matrices[i][0,k] = 1.0;
             matrices[i][1,k] = np.exp((exponent + freqs[k] * 1j) * 2**(d - i - 1))
     tensor = cp_restore([2] * d, matrices, R, norms)
-    return tensor.flatten()
+    return tensor.flatten(), matrices
 
 if __name__ == '__main__':
     #sig = create_signal({'N':2048, 'pivots':[-0.024+1.5j]})
