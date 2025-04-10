@@ -73,14 +73,18 @@ def print_matrices(matrices : list, tshape, filename, complex=True):  # &
             f.write("\n")
 
 
-def plot_signal(a : np.ndarray, abs=True, name=''):
+def plot_signal(a : np.ndarray, abs=True, log=False, name=''):
     if abs:
         plt.title('abs ' + name)
         plt.plot(np.abs(a.ravel()))
-    else:
+    elif log:
         plt.title('logarithmic ' + name)
         plt.plot(np.real(np.log(a.ravel())))
         plt.plot(np.imag(np.log(a.ravel())))
+    else:
+        plt.title(name)
+        plt.plot(np.real(a.ravel()))
+        plt.plot(np.imag(a.ravel()))
 
 
 def plot_spectrum(s : np.ndarray, abs=False, name=''):
@@ -212,7 +216,7 @@ def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt"
     print("end relative residual:", n2 / normT)
     matrices[0] = matrices[0] @ np.diag(norms)
     print_matrices(matrices, shape, filename=filename_out)
-    print_data(cp_restore(shape, matrices, R).flatten(), complex=True, filename=filenames_dict["result"])
+    print_data(cp_restore(shape, matrices, R).ravel(), complex=True, filename=filenames_dict["result"])
 
     return i, n2 / normT
 
