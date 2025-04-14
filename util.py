@@ -182,7 +182,7 @@ def ttsvd_restore(d, gset):
     return gg
 
 
-def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt"):
+def exec_als(R=1, use_random_matrices=True, print_info=3, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt"):
     data = read_data(filenames_dict["data"])
 
     # reading shape
@@ -208,11 +208,13 @@ def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt"
     normT = np.linalg.norm(T)
     while np.abs(n2 - n1) / normT > epsilon_rel:  # ?????????
         matrices, norms, n1, n2 = als_iteration_2(T, shape, matrices, norms, R, 43)
-        print(np.abs(n2 - n1) / normT, ', res:', n2 / normT)
+        if print_info >= 2:
+            print(np.abs(n2 - n1) / normT, ', res:', n2 / normT)
         i += 1
 
-    print("total iterations:", i)
-    print("end relative residual:", n2 / normT)
+    if print_info >= 1:
+        print("total iterations:", i)
+        print("end relative residual:", n2 / normT)
     matrices[0] = matrices[0] @ np.diag(norms)
     print_matrices(matrices, shape, filename=filename_out)
     print_data(cp_restore(shape, matrices, R).ravel(), complex=True, filename=filenames_dict["result"])
