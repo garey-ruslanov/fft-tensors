@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 
 import subprocess
 
-from fit_exp import try_fit, detect_bullshit
+from als import als_iteration_2, cp_restore, normalize_matrices2, random_matrices
+from fit_exp import try_fit
 from reconstruct import reconstruct_from_pivots
+
 
 filenames_dict = {"data":"out_data.txt", 
                 "shape":"out_shape.txt",
@@ -180,9 +182,6 @@ def ttsvd_restore(d, gset):
     return gg
 
 
-from als import *
-
-
 def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt"):
     data = read_data(filenames_dict["data"])
 
@@ -208,7 +207,7 @@ def exec_als(R=1, use_random_matrices=True, filename_in="als_start_matrices.txt"
     n2 = 1.0
     normT = np.linalg.norm(T)
     while np.abs(n2 - n1) / normT > epsilon_rel:  # ?????????
-        matrices, norms, n1, n2 = als_iteration_1(T, shape, matrices, norms, R)
+        matrices, norms, n1, n2 = als_iteration_2(T, shape, matrices, norms, R, 43)
         print(np.abs(n2 - n1) / normT, ', res:', n2 / normT)
         i += 1
 

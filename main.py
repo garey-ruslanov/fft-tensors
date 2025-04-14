@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 import subprocess
 
-from util import *
-from util2 import *
-from als import *
-from als import cp_restore, normalize_matrices2  # why vscode does not see import *.....
+from als import cp_restore
+from fit_exp import detect_bullshit
+from util import exec_als, extend2n, info_rank1, plot_spectrum, print_data, print_matrices, read_data, read_matrices, read_raw, ttsvd
+from util2 import fit_exp_whole_signal, matrices_add1, signal_from_pivots
 
 # data: real 13C
 # filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/real13C/fid1'
