@@ -7,6 +7,7 @@ from als import cp_restore
 from fit_exp import detect_bullshit
 from util import exec_als, extend2n, info_rank1, plot_spectrum, print_data, print_matrices, read_data, read_matrices, read_raw, ttsvd
 from util2 import fit_exp_whole_signal, matrices_add1, signal_from_pivots
+from artificial import normal_noise, random_signal
 
 # data: real 13C
 # filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/real13C/fid1'
@@ -147,7 +148,7 @@ def experiment_2(data : np.ndarray, sR : int, R : int, draw_info=True, flag2=Fal
     return prev_matrices
 
 
-def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info=True, save_matrices_every=4):
+def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info=2, print_info=3, save_matrices_every=4):
     n = data.size       ; N = n
     d = int(np.log2(n)) ; D = d
     R = rank
@@ -198,7 +199,8 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
     residual_norms = []
 
     for r in range(start_rank+1, R+1):
-        print("r =", r)
+        if print_info >= 1:
+            print("r =", r)
 
         if mode == "ttsvd":
             g1 = ttsvd(d, data.reshape(shape), [1]*d, -1)
@@ -219,7 +221,7 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
         print_data(np.asarray(shape), complex=False, filename=filenames_dict["shape"])
         print_matrices(matrices, shape, complex=True, filename="als_start_matrices.txt")
         
-        iter, res_norm = exec_als(R=r, use_random_matrices=False, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
+        iter, res_norm = exec_als(R=r, use_random_matrices=False, print_info=print_info, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
         iterations.append(iter)
         residual_norms.append(res_norm)
 
@@ -228,19 +230,42 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
 
         matrices = matrices_ls
 
-        if draw_info:
+        if draw_info >= 2:
             plot_spectrum(data, abs=True)
             plot_spectrum(t_a, abs=True)
             plt.show()
+        
+        if save_matrices_every > 0 and r % save_matrices_every == 0:
+            print_matrices(matrices, shape, complex=True, filename=("als_matrices_" + str(r) + ".txt"))
+            if print_info >= 1:
+                print("matrices saved")
+    if print_info >= 1:
+        print(iterations)
+        print(residual_norms)
 
-    print(iterations)
-    print(residual_norms)
-
-    plot_spectrum(data, abs=True)
-    plot_spectrum(cp_restore(shape, matrices, R).flatten(), abs=True)
-    plt.show()
+    if draw_info >= 1:
+        plot_spectrum(data, abs=True)
+        plot_spectrum(cp_restore(shape, matrices, R).flatten(), abs=True)
+        plt.show()
 
     return matrices
+
+# wip
+def experiment_fuller(snr):
+    N = 16384
+
+    pure_data = random_signal(N, 3, 1000, -1e-4)[0] + random_signal(N, 4, 50, -3e-5)[0]
+    norm = np.linalg.norm(pure_data)
+    noisy_data = pure_data + normal_noise(N, norm * snr)
+
+    plot_spectrum(noisy_data, abs=True)
+    plot_spectrum(pure_data, abs=True)
+    plt.show()
+
+    als_matrices = \
+    experiment_full(noisy_data, 30, mode="random pivots", draw_info=1, print_info=1)
+
+
 
 """
 # data: topspin generated 13C
@@ -271,6 +296,10 @@ noise_uniform(data, np.max(np.abs(data)) * snr)
 
 experiment(data, 10)
 """
+
+experiment_fuller(0.01)
+exit(0)
+
 
 filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/generated/ile_1H'
 #filename = '/mnt/c/Users/Ruslan Gareev/Desktop/rehcfx/raw fids/real13C/fid1'
