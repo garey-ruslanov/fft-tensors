@@ -6,11 +6,14 @@ blas-3.12.0.tgz
 __pycache__
 
 out*.txt
+als_*.txt
+result_*.txt
+
 leonid*
 fid*
 param
 compile_als
-als_start_matrices.txt
 sb*.py
 temp.txt
 Bg-25/*
+
