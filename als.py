@@ -1,6 +1,6 @@
-
 import numpy as np
 import scipy.linalg as sclin
+
 
 def least_squares(A: np.ndarray, F: np.ndarray):  # ||AX - F|| -> min
     return np.linalg.pinv(A) @ F
@@ -65,8 +65,11 @@ def als_iteration_1(T: np.ndarray, dims, matrices: list, norms, rank):
         # ||tk^T - mat_khr*N*A^T|| -> min
         # A^T = mat_khr^+*tk^T
         # A = tk*mat_khr^+^T
-
-        mat_new = (np.linalg.pinv(matrix_kh_r) @ tk.T).T
+        
+        X = (matrix_kh_r.conj()).T @ matrix_kh_r
+        Y = (tk @ matrix_kh_r.conj()).T
+        #mat_new = (np.linalg.pinv(matrix_kh_r) @ tk.T).T
+        mat_new = (np.linalg.pinv(X) @ Y).T
         matrices[k] = mat_new
         matrices, norms = normalize_matrices2(rank, matrices)
 
@@ -75,6 +78,38 @@ def als_iteration_1(T: np.ndarray, dims, matrices: list, norms, rank):
     norm_e = np.linalg.norm(T - cp_restore(dims, matrices, rank, norms))
     return matrices, norms, norm_s, norm_e
 
+
+# wip
+def als_iteration_2(T: np.ndarray, dims, matrices: list, norms, rank, d_ones):
+    d = len(dims)
+    n = np.prod(dims)
+    ind = tuple(np.arange(d))
+    norm_s = np.linalg.norm(T - cp_restore(dims, matrices, rank, norms))
+
+    rightM = [np.ones((rank, rank), dtype=complex)]
+    leftM = [np.ones((rank, rank), dtype=complex)]
+
+    for i in range(d-1, 0, -1):
+        X = np.multiply(rightM[0], (matrices[i].conj().T @ matrices[i]))
+        rightM.insert(0, X)
+
+    for k in range(d):
+        krp = np.ones((1, rank), dtype=complex)
+        for i in range(d):
+            if i == k:
+                continue
+            krp = sclin.khatri_rao(krp, matrices[i])
+        mttkrp = (T.transpose(((k,) + ind[:k] + ind[k+1:])).reshape((dims[k], n // dims[k])) @ krp.conj()).T
+
+        mat_new = (np.linalg.pinv(np.multiply(leftM[k], rightM[k])) @ mttkrp).T
+        matrices[k] = mat_new
+        matrices, norms = normalize_matrices2(rank, matrices)
+
+        X = np.multiply(leftM[-1], (matrices[k].conj().T @ matrices[k]))
+        leftM.append(X)
+
+    norm_e = np.linalg.norm(T - cp_restore(dims, matrices, rank, norms))
+    return matrices, norms, norm_s, norm_e
 
 def random_matrices(dims, rank):
     d = len(dims)
