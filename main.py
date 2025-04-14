@@ -146,15 +146,17 @@ def experiment_2(data : np.ndarray, sR : int, R : int, draw_info=True, flag2=Fal
 
     return prev_matrices
 
-# WIP
-def experiment_full(data : np.ndarray, rank : int, mode : str, save_matrices_every=4):
+
+def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info=True, save_matrices_every=4):
     n = data.size       ; N = n
     d = int(np.log2(n)) ; D = d
     R = rank
-    shape = tuple([2] * d)
+    shape = tuple([2] * (D + D_im))
     assert np.prod(shape) == n
 
-    start_rank = 20  # ?
+    start_rank = 0  # ?
+
+    n_images = 2**D_im
 
     # returns indices of at most 2 elements that differ from max by 0.08 or less
     def max_2(spectrum):
@@ -195,7 +197,7 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, save_matrices_eve
     iterations = []
     residual_norms = []
 
-    for r in range(start_rank, R+1):
+    for r in range(start_rank+1, R+1):
         print("r =", r)
 
         if mode == "ttsvd":
@@ -208,18 +210,9 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, save_matrices_eve
             pass
 
         if mode == "random pivots":
-            # shit
-            #I = max_2(data - cp_restore(shape, matrices, r-1).flatten())[0]
-            #approx_freq = signal_from_pivots(D, (exponent + I * 1j), None)
-            #new_matrices = [np.zeros((2, r+1), dtype=complex) for i in range(d)]
-            #for i in range(d):
-            #    new_matrices[i][:,:r] = matrices[i][:,:]
-            #    new_matrices[i][:,r] = approx_freq[i][:,0]
-            # 
-            #matrices = new_matrices
-            # переделать эту хуйню
-            pass
-        
+            pivo = exponent + 1j * np.random.rand() * n 
+            matrices = matrices_add1(matrices, D - D_im, D_im, pivo)
+
         from util import filenames_dict
 
         print_data(data, complex=True, filename=filenames_dict["data"])
@@ -235,12 +228,11 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, save_matrices_eve
 
         matrices = matrices_ls
 
-        plot_spectrum(data, abs=True)
-        plot_spectrum(t_a, abs=True)
-        plt.show()
+        if draw_info:
+            plot_spectrum(data, abs=True)
+            plot_spectrum(t_a, abs=True)
+            plt.show()
 
-        if mode == "random pivots":
-            break
     print(iterations)
     print(residual_norms)
 
@@ -287,19 +279,28 @@ data = extend2n(read_raw(filename))
 #experiment(data, 15)
 #experiment_2(data, 51, 51, draw_info=False, prev_matrices=read_matrices([2] * (int(np.log2(data.size))), filename="out_als_matrices 50.txt"))
 
+#data = np.concatenate((data, data))
+#data = np.concatenate((data, data))
+#data = np.concatenate((data, data))
+
 D = int(np.log2(data.size))
 shape = tuple([2] * D)
 
-R = 40
+R = 10
 #als_matrices = \
 #experiment_2(data, 1, R, draw_info=False, prev_matrices=None, flag2=True)
+
+#als_matrices, norms = normalize_matrices2(R, als_matrices)
+#print(norms)
 #als_matrices = \
 #read_matrices(shape, "out_als_matrices.txt")
 als_matrices = \
-experiment_full(data=data, rank=R, mode="random pivots", )
+experiment_full(data=data, rank=R, mode="random pivots", draw_info=False)
+
+#als_matrices, norms = normalize_matrices2(R, als_matrices)
+#print(norms)
 
 
-als_matrices, norms = normalize_matrices2(R, als_matrices)
 comps = []
 for i in range(R):
     mat1 = [np.zeros((2,1), dtype=complex) for _ in range(D)]
