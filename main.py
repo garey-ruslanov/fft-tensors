@@ -152,10 +152,10 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
     n = data.size       ; N = n
     d = int(np.log2(n)) ; D = d
     R = rank
-    shape = tuple([2] * (D + D_im))
+    shape = tuple([2] * (D))
     assert np.prod(shape) == n
 
-    start_rank = 0  # ?
+    start_rank = 1  # ?
 
     n_images = 2**D_im
 
@@ -180,11 +180,12 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
     matrices = []
     if mode == "random pivots":
         exponent = fit_exp_whole_signal(data)
-        signal, matrices, _ = signal_from_pivots(D, [exponent + 1j * np.random.rand() * n for _ in range(start_rank)], None)
+        matrices = matrices_add1(matrices, D - D_im, D_im, exponent + 1j * np.random.rand() * n)
+        signal = cp_restore(shape, matrices, 1).ravel()        
 
         max_freq_data = np.max(np.abs(np.fft.fft(data)))
         max_freq_rand = np.max(np.abs(np.fft.fft(signal)))
-        norms = [max_freq_data / max_freq_rand] * start_rank
+        norms = [max_freq_data / max_freq_rand]
         matrices[0] = matrices[0] @ np.diag(norms)
 
     if mode == "ttsvd":
@@ -255,6 +256,11 @@ def experiment_fuller(snr):
     N = 16384
 
     pure_data = random_signal(N, 3, 1000, -1e-4)[0] + random_signal(N, 4, 50, -3e-5)[0]
+    pure_data = np.concatenate((pure_data, pure_data))
+    pure_data = np.concatenate((pure_data, pure_data))
+    pure_data = np.concatenate((pure_data, pure_data))
+    N *= 8
+
     norm = np.linalg.norm(pure_data)
     noisy_data = pure_data + normal_noise(N, norm * snr)
 
@@ -263,7 +269,7 @@ def experiment_fuller(snr):
     plt.show()
 
     als_matrices = \
-    experiment_full(noisy_data, 30, mode="random pivots", draw_info=1, print_info=1)
+    experiment_full(noisy_data, 20, mode="random pivots", D_im=3, draw_info=1, print_info=3)
 
 
 

@@ -56,7 +56,7 @@ def matrices_add1(matrices, D_f, D_im, pivot):
         new_matrices[i][:,:R] = matrices[i][:,:]  # ones
         new_matrices[i][0,R] = 1.0
         new_matrices[i][1,R] = 1.0
-    for i in range(D_im, D_f):
+    for i in range(D_im, D_f + D_im):
         new_matrices[i][:,:R] = matrices[i][:,:]
         new_matrices[i][0,R] = 1.0
         new_matrices[i][1,R] = np.exp(pivot * 2**(D_f - i - 1))
@@ -74,7 +74,7 @@ def matrices_add2(matrices, D_f, D_im, pivot1, pivot2):
         new_matrices[i][:,:R] = matrices[i][:,:]  # ones
         new_matrices[i][0,R] = 1.0
         new_matrices[i][1,R] = 1.0
-    for i in range(D_f):
+    for i in range(D_im, D_f + D_im):
         new_matrices[i][:,:R] = matrices[i][:,:]
         new_matrices[i][0,R] = 1.0
         new_matrices[i][1,R] = np.exp(pivot1 * 2**(D_f - i - 1))
