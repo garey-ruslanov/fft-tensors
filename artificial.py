@@ -21,6 +21,11 @@ def random_signal(n, n_peaks, max_ampl, exponent):
     tensor = cp_restore([2] * d, matrices, R, norms)
     return tensor.flatten(), matrices
 
+
+def normal_noise(n, c):
+    return (np.random.randn(n) + np.random.randn(n) * 1j) * c * 2**(-0.5)
+
+
 if __name__ == '__main__':
     #sig = create_signal({'N':2048, 'pivots':[-0.024+1.5j]})
     #noise_uniform(sig, 0.05)
