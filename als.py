@@ -94,15 +94,19 @@ def als_iteration_2(T: np.ndarray, dims, matrices: list, norms, rank, d_ones):
         rightM.insert(0, X)
 
     for k in range(d):
-        krp = np.ones((1, rank), dtype=complex)
-        for i in range(d):
-            if i == k:
-                continue
-            krp = sclin.khatri_rao(krp, matrices[i])
-        mttkrp = (T.transpose(((k,) + ind[:k] + ind[k+1:])).reshape((dims[k], n // dims[k])) @ krp.conj()).T
+        if k <= d_ones:
+            mat_new = np.ones((2, rank), dtype=complex)
+        else:
+            krp = np.ones((1, rank), dtype=complex)
+            for i in range(d):
+                if i == k:
+                    continue
+                krp = sclin.khatri_rao(krp, matrices[i])
+            mttkrp = (T.transpose(((k,) + ind[:k] + ind[k+1:])).reshape((dims[k], n // dims[k])) @ krp.conj()).T
 
-        mat_new = (np.linalg.pinv(np.multiply(leftM[k], rightM[k])) @ mttkrp).T
+            mat_new = (np.linalg.pinv(np.multiply(leftM[k], rightM[k])) @ mttkrp).T
         matrices[k] = mat_new
+
         matrices, norms = normalize_matrices2(rank, matrices)
 
         X = np.multiply(leftM[-1], (matrices[k].conj().T @ matrices[k]))

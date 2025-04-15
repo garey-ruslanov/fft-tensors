@@ -208,12 +208,13 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
             cp1 = [np.copy(g1[i].reshape((shape[i], 1))) for i in range(d)]
             if len(matrices) == 0:
                 pass
-            # don't care what happens here, not going to execute it
-            # поебать че тут происходит, все равно не буду это запускать
+            # 
             pass
 
         if mode == "random pivots":
-            pivo = exponent + 1j * np.random.rand() * n 
+            residual = data - cp_restore(shape, matrices, r-1).ravel()
+            pivo = exponent + 1j * np.argmax(np.fft.fft(residual)) / n * 2 * np.pi
+            
             matrices = matrices_add1(matrices, D - D_im, D_im, pivo)
 
         from util import filenames_dict
@@ -222,7 +223,7 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
         print_data(np.asarray(shape), complex=False, filename=filenames_dict["shape"])
         print_matrices(matrices, shape, complex=True, filename="als_start_matrices.txt")
         
-        iter, res_norm = exec_als(R=r, use_random_matrices=False, print_info=print_info, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
+        iter, res_norm = exec_als(R=r, D_im=D_im, use_random_matrices=False, print_info=print_info, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
         iterations.append(iter)
         residual_norms.append(res_norm)
 
@@ -269,7 +270,7 @@ def experiment_fuller(snr):
     plt.show()
 
     als_matrices = \
-    experiment_full(noisy_data, 20, mode="random pivots", D_im=3, draw_info=1, print_info=3)
+    experiment_full(noisy_data, 16, mode="random pivots", D_im=3, draw_info=1, print_info=3, save_matrices_every=1)
 
 
 
