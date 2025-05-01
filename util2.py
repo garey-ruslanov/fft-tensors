@@ -45,21 +45,17 @@ def signal_from_pivots(D, pivots, coefficients=None):
     return signal, matrices, coefficients
 
 
-def matrices_add1(matrices, D_f, D_im, pivot):
+def matrices_add_random(matrices, D_f, D_im, pivot):
     if matrices is None or len(matrices) == 0:
         new_matrices = [np.asarray([[1.0], [1.0]], dtype=complex) for i in range(D_im)] + [np.asarray([[1.0], [np.exp(pivot * 2**(D_f - i - 1))]]) for i in range(D_f)]
         return new_matrices
 
     R = matrices[0].shape[1]
     new_matrices = [np.zeros((matrices[i].shape[0], R+1), dtype=complex) for i in range(D_f + D_im)]
-    for i in range(D_im):
-        new_matrices[i][:,:R] = matrices[i][:,:]  # ones
-        new_matrices[i][0,R] = 1.0
-        new_matrices[i][1,R] = 1.0
-    for i in range(D_im, D_f + D_im):
+    for i in range(D_f + D_im):
         new_matrices[i][:,:R] = matrices[i][:,:]
         new_matrices[i][0,R] = 1.0
-        new_matrices[i][1,R] = np.exp(pivot * 2**(D_f - i - 1))
+        new_matrices[i][1,R] = (np.random.randn() + np.random.randn()*1j) / 2**(0.5) * np.abs(pivot)
     return new_matrices
 
 

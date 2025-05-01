@@ -10,6 +10,8 @@ def cp_restore(dims, matrices, rank, norms=None):
     if norms is None:
         norms = np.ones((rank,), dtype=complex)
     T = np.zeros(dims, dtype=complex)
+    if len(matrices) == 0:
+        return T
     alpha = 'abcdefghijklmnopqrstuvwxyz'
     for j in range(rank):
         tj = matrices[0][:,j]
@@ -80,7 +82,7 @@ def als_iteration_1(T: np.ndarray, dims, matrices: list, norms, rank):
 
 
 # wip
-def als_iteration_2(T: np.ndarray, dims, matrices: list, norms, rank, d_ones):
+def als_iteration_2(T: np.ndarray, dims, matrices: list, norms, rank, constraint, d_ones):
     d = len(dims)
     n = np.prod(dims)
     ind = tuple(np.arange(d))
@@ -94,7 +96,7 @@ def als_iteration_2(T: np.ndarray, dims, matrices: list, norms, rank, d_ones):
         rightM.insert(0, X)
 
     for k in range(d):
-        if k <= d_ones:
+        if constraint and k < d_ones:
             mat_new = np.ones((2, rank), dtype=complex)
         else:
             krp = np.ones((1, rank), dtype=complex)
