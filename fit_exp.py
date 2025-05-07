@@ -60,3 +60,29 @@ def detect_bullshit(inds):
     #print(norm2(np.asarray(inds) - np.asarray(inds_new)))
 
     return inds_new
+
+
+def f(matrices, R, D_real, D_im):
+    assert len(matrices) == D_real + D_im
+    Cs = []
+    for k in range(R):
+        cols = []
+        C = 1.0+0.0j
+        for i in range(D_real + D_im):
+            cols.append(matrices[i][:,k])
+            C *= cols[i][0]
+            cols[i] /= cols[i][0]
+
+        exps = []
+        for i in range(D_im + D_real):
+            exps.append(cols[i][1])
+
+        Cs.append(C)
+        print(k, C)
+        print(exps)
+        plt.plot(np.abs(exps))
+
+    print(Cs)
+    plt.legend(np.arange(1,R+1))
+    plt.show()
+

@@ -5,8 +5,8 @@ import subprocess
 
 from als import cp_restore
 from fit_exp import detect_bullshit
-from util import exec_als, extend2n, info_rank1, plot_spectrum, print_data, print_matrices, read_data, read_matrices, read_raw, ttsvd
-from util2 import fit_exp_whole_signal, matrices_add1, signal_from_pivots
+from util import exec_als, extend2n, info_rank1, plot_signal, plot_spectrum, print_data, print_matrices, read_data, read_matrices, read_raw, ttsvd
+from util2 import fit_exp_whole_signal, matrices_add_random, signal_from_pivots
 from artificial import normal_noise, random_signal
 
 # data: real 13C
@@ -155,38 +155,13 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
     shape = tuple([2] * (D))
     assert np.prod(shape) == n
 
-    start_rank = 1  # ?
 
     n_images = 2**D_im
 
-    # returns indices of at most 2 elements that differ from max by 0.08 or less
-    def max_2(spectrum):
-        k = 2
-        arr = np.abs(spectrum)
-        n = len(arr)
-        m = np.max(arr)
-        arr = arr / m
-        e = 0.08  # ???
-        l = []
-        for i in range(n):
-            v = arr[i]
-            if abs(m - v) < e:
-                l.append((v, i))
-        l = sorted(l, key=lambda x: x[0], reverse=True)
-        if len(l) > k:
-            l = l[:k]
-        return tuple([ll[1] for ll in l])
 
     matrices = []
     if mode == "random pivots":
         exponent = fit_exp_whole_signal(data)
-        matrices = matrices_add1(matrices, D - D_im, D_im, exponent + 1j * np.random.rand() * n)
-        signal = cp_restore(shape, matrices, 1).ravel()        
-
-        max_freq_data = np.max(np.abs(np.fft.fft(data)))
-        max_freq_rand = np.max(np.abs(np.fft.fft(signal)))
-        norms = [max_freq_data / max_freq_rand]
-        matrices[0] = matrices[0] @ np.diag(norms)
 
     if mode == "ttsvd":
         g1 = ttsvd(d, data.reshape(shape), [1]*d, -1)
@@ -194,12 +169,12 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
 
     if mode == "random":
         from als import random_matrices
-        matrices = random_matrices(shape, start_rank)
+        matrices = random_matrices(shape, 1)  #
     
     iterations = []
     residual_norms = []
 
-    for r in range(start_rank+1, R+1):
+    for r in range(1, R+1):
         if print_info >= 1:
             print("r =", r)
 
@@ -213,17 +188,22 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
 
         if mode == "random pivots":
             residual = data - cp_restore(shape, matrices, r-1).ravel()
-            pivo = exponent + 1j * np.argmax(np.fft.fft(residual)) / n * 2 * np.pi
+            #pivo = exponent + 1j * np.argmax(np.fft.fft(residual)) / n * 2 * np.pi
+            pivo = exponent + 1j * (np.random.rand() * 2*np.pi)
             
-            matrices = matrices_add1(matrices, D - D_im, D_im, pivo)
+            m1 = matrices
+            matrices = matrices_add_random(matrices, D - D_im, D_im, pivo)
+            #plot_spectrum(cp_restore(shape, matrices, r).ravel() - cp_restore(shape, m1, r-1).ravel(), abs=True)
+            #plt.show()
 
+        
         from util import filenames_dict
 
         print_data(data, complex=True, filename=filenames_dict["data"])
         print_data(np.asarray(shape), complex=False, filename=filenames_dict["shape"])
         print_matrices(matrices, shape, complex=True, filename="als_start_matrices.txt")
         
-        iter, res_norm = exec_als(R=r, D_im=D_im, use_random_matrices=False, print_info=print_info, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
+        iter, res_norm = exec_als(R=r, D_im=D_im, constraint=False, use_random_matrices=False, print_info=print_info, filename_in="als_start_matrices.txt", filename_out="out_als_matrices.txt")
         iterations.append(iter)
         residual_norms.append(res_norm)
 
@@ -247,7 +227,7 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
 
     if draw_info >= 1:
         plot_spectrum(data, abs=True)
-        plot_spectrum(cp_restore(shape, matrices, R).flatten(), abs=True)
+        plot_spectrum(cp_restore(shape, matrices, R).ravel(), abs=True)
         plt.show()
 
     return matrices
@@ -255,23 +235,45 @@ def experiment_full(data : np.ndarray, rank : int, mode : str, D_im=0, draw_info
 # wip
 def experiment_fuller(snr):
     N = 16384
+    doub = 1
 
-    pure_data = random_signal(N, 3, 1000, -1e-4)[0] + random_signal(N, 4, 50, -3e-5)[0]
-    pure_data = np.concatenate((pure_data, pure_data))
-    pure_data = np.concatenate((pure_data, pure_data))
-    pure_data = np.concatenate((pure_data, pure_data))
-    N *= 8
+    pure_data = random_signal(N, 3, 1000, -1e-4)[0] + random_signal(N, 4, 100, -3e-5)[0]
+    for _ in range(doub):
+        pure_data = np.concatenate((pure_data, pure_data))
+        N *= 2
 
+    c = 10**(snr/20)
     norm = np.linalg.norm(pure_data)
-    noisy_data = pure_data + normal_noise(N, norm * snr)
+    sigma = norm / c
+    noisy_data = pure_data + normal_noise(N, sigma / N**0.5)
+
+    ave1 = np.sum(pure_data.reshape((2**doub, N // 2**doub)), axis=0) / (2**doub)
+    ave = np.sum(noisy_data.reshape((2**doub, N // 2**doub)), axis=0) / (2**doub)
+
+    print(20*np.log10(np.linalg.norm(ave1)/(np.linalg.norm(ave1 - ave))))
+
+    #print(np.max(np.abs(pure_data)) / sigma)
+    print(np.max(np.abs(ave1)) / np.linalg.norm(ave) * len(ave))
+    print(np.max(np.abs(pure_data)) / np.linalg.norm(noisy_data - pure_data) * len(noisy_data - pure_data))
+
+    plot_spectrum(ave, abs=True)
+    plt.plot(np.ones((N // (2**doub))) * norm / c)
+    plt.plot(np.ones((N // (2**doub))) * norm / c * 3)
+    plt.show()
 
     plot_spectrum(noisy_data, abs=True)
     plot_spectrum(pure_data, abs=True)
+    plt.plot(np.ones((N)) * norm / c)
+    plt.plot(np.ones((N)) * norm / c * 3)
     plt.show()
 
+    R = 7
     als_matrices = \
-    experiment_full(noisy_data, 16, mode="random pivots", D_im=3, draw_info=1, print_info=3, save_matrices_every=1)
+    experiment_full(noisy_data, R, mode="random pivots", D_im=doub, draw_info=1, print_info=3, save_matrices_every=-1)
 
+    from fit_exp import f
+
+    f(als_matrices, R, len(als_matrices) - doub, doub)
 
 
 """
@@ -304,7 +306,16 @@ noise_uniform(data, np.max(np.abs(data)) * snr)
 experiment(data, 10)
 """
 
-experiment_fuller(0.01)
+
+#data = read_data("out_data.txt")
+#shape = tuple([2] * 19)
+#mat = read_matrices(shape, "als_matrices_20.txt")
+#plot_spectrum(data, abs=True)
+#plot_spectrum(data - cp_restore(shape, mat, 20).ravel(), abs=True)
+#plt.show()
+
+
+experiment_fuller(0)
 exit(0)
 
 
